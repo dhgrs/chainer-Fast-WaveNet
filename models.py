@@ -38,7 +38,7 @@ class ResidualNet(chainer.ChainList):
         dilations = [
             n_filter ** i for j in range(n_loop) for i in range(n_layer)]
         for i, dilation in enumerate(dilations):
-            self.add_link(ResidualBlock(dilation))
+            self.add_link(ResidualBlock(dilation, n_channel1, n_channel2))
 
     def __call__(self, x):
         for i, func in enumerate(self.children()):
@@ -64,11 +64,10 @@ class WaveNet(chainer.Chain):
             self.proj2 = L.Convolution2D(n_channel3, quantize, 1)
         self.n_layer = n_layer
 
-    def __call__(self, x):
+    def __call__(self, x, t=None):
         # Causal Conv
         length = x.shape[2]
         x = self.caus(x)
-        print(x.shape)
         x = x[:, :, :length, :]
 
         # Residual & Skip-conenection
@@ -77,4 +76,10 @@ class WaveNet(chainer.Chain):
         # Output
         z = F.relu(self.proj1(z))
         y = self.proj2(z)
-        return y
+        if chainer.config.train:
+            loss = F.softmax_cross_entropy(y, t)
+            accuracy = F.accuracy(y, t)
+            chainer.report({'loss': loss, 'accuracy': accuracy}, self)
+            return loss
+        else:
+            return y
