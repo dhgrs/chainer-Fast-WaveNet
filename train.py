@@ -30,9 +30,12 @@ parser.add_argument('--resume', '-r', default='',
 args = parser.parse_args()
 
 # load data
-preprocess = Preprocess(opt.sr, opt.mu, opt.length, opt.random)
-train = chainer.datasets.TransformDataset(glob.glob(os.path.join(opt.train_dir, '*')), preprocess)
-valid = chainer.datasets.TransformDataset(glob.glob(os.path.join(opt.valid_dir, '*')), preprocess)
+preprocess = Preprocess(
+    opt.data_format, opt.sr, opt.mu, opt.length, opt.random)
+train = chainer.datasets.TransformDataset(glob.glob(
+    os.path.join(opt.train_dir, '*.{}'.format(opt.data_format))), preprocess)
+valid = chainer.datasets.TransformDataset(glob.glob(os.path.join(
+    opt.valid_dir, '*.{}'.format(opt.data_format))), preprocess)
 
 # make directory of results
 result = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')

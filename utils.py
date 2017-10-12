@@ -27,7 +27,8 @@ class mu_law(object):
 
 
 class Preprocess(object):
-    def __init__(self, sr, mu, length, random):
+    def __init__(self, data_format, sr, mu, length, random):
+        self.data_format = data_format
         self.sr = sr
         self.mu = mu
         self.mu_law = mu_law(mu)
@@ -36,7 +37,7 @@ class Preprocess(object):
 
     def __call__(self, path):
         # load data
-        npy_path = path.replace('.flac',
+        npy_path = path.replace('.{}'.format(self.data_format),
                                 '_{}_{}.npy'.format(self.sr, self.mu+1))
         if os.path.exists(npy_path):
             t = np.load(npy_path)

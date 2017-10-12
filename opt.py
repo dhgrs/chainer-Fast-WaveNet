@@ -1,6 +1,7 @@
 # data directories
 train_dir = 'train/'
 valid_dir = 'valid/'
+data_format = 'flac'
 
 # input parameter
 batchsize = 4
