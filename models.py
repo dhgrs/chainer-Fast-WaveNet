@@ -64,7 +64,7 @@ class WaveNet(chainer.Chain):
             self.proj2 = L.Convolution2D(n_channel3, quantize, 1)
         self.n_layer = n_layer
 
-    def __call__(self, x, t=None):
+    def __call__(self, x, t=None, generate=False):
         # Causal Conv
         length = x.shape[2]
         x = self.caus(x)
@@ -76,10 +76,10 @@ class WaveNet(chainer.Chain):
         # Output
         z = F.relu(self.proj1(z))
         y = self.proj2(z)
-        if chainer.config.train:
+        if generate:
+            return y
+        else:
             loss = F.softmax_cross_entropy(y, t)
             accuracy = F.accuracy(y, t)
             chainer.report({'loss': loss, 'accuracy': accuracy}, self)
             return loss
-        else:
-            return y
