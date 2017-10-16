@@ -18,5 +18,8 @@ n_channel1 = 64
 n_channel2 = 32
 n_channel3 = 512
 
+# learning parameter
+lr = 1e-4
+
 # trigger
 epoch = 10

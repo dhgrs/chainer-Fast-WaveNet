@@ -50,7 +50,7 @@ model = models.WaveNet(opt.n_loop, opt.n_layer, opt.n_filter, opt.mu,
                        opt.n_channel1, opt.n_channel2, opt.n_channel3)
 
 # Optimizer
-optimizer = chainer.optimizers.Adam()
+optimizer = chainer.optimizers.Adam(opt.lr)
 optimizer.setup(model)
 
 # Iterator
