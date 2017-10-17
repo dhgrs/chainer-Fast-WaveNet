@@ -85,7 +85,8 @@ trainer = chainer.training.Trainer(updater, (opt.epoch, 'epoch'), out=result)
 trainer.extend(extensions.Evaluator(valid_iter, model, device=gpu),
                trigger=(1000, 'iteration'))
 trainer.extend(extensions.dump_graph('main/loss'))
-trainer.extend(extensions.snapshot(), trigger=(1000, 'iteration'))
+trainer.extend(extensions.snapshot_object(model, 'model{.updater.iteration}'),
+               trigger=(1000, 'iteration'))
 trainer.extend(extensions.LogReport(trigger=(5, 'iteration')))
 trainer.extend(extensions.PrintReport(
     ['epoch', 'iteration', 'main/loss', 'main/accuracy',
