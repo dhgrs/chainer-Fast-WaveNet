@@ -4,7 +4,6 @@ import os
 
 import numpy as np
 import librosa
-from matplotlib import pyplot as plt
 
 
 class mu_law(object):
@@ -38,7 +37,7 @@ class Preprocess(object):
     def __call__(self, path):
         # load data
         npy_path = path.replace('.{}'.format(self.data_format),
-                                '_{}_{}.npy'.format(self.sr, self.mu+1))
+                                '_{}_{}.npy'.format(self.sr, self.mu))
         if os.path.exists(npy_path):
             t = np.load(npy_path)
         else:
@@ -54,7 +53,7 @@ class Preprocess(object):
             t = t[:self.length]
 
         # expand dimension
-        y = np.identity(self.mu + 1)[t].astype(np.float32)
+        y = np.identity(self.mu)[t].astype(np.float32)
         y = np.expand_dims(y.T, 2)
         t = np.expand_dims(t.astype(np.int32), 1)
         return y[:, :-1, :], t[1:, :]
