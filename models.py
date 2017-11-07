@@ -71,10 +71,16 @@ class ResidualNet(chainer.ChainList):
 
     def generate(self, x):
         sample = x
-        for func in self.children():
+        for i, func in enumerate(self.children()):
+            a = sample
             func.push(sample)
             sample = func.pop()
-        return sample
+            if i == 0:
+                skip_connections = sample
+            else:
+                skip_connections += sample
+            sample = sample + a
+        return skip_connections
 
 
 class WaveNet(chainer.Chain):
@@ -105,19 +111,20 @@ class WaveNet(chainer.Chain):
         # Output
         z = F.relu(self.proj1(z))
         y = self.proj2(z)
-        if generate:
+        if t is None:
             return y
-        else:
-            loss = F.softmax_cross_entropy(y, t)
-            accuracy = F.accuracy(y, t)
-            chainer.report({'loss': loss, 'accuracy': accuracy}, self)
-            return loss
+
+        loss = F.softmax_cross_entropy(y, t)
+        accuracy = F.accuracy(y, t)
+        chainer.report({'loss': loss, 'accuracy': accuracy}, self)
+        return loss
 
     def initialize(self, n):
         self.resb.initialize(n)
         self.caus.pad = (0, 0)
         self.queue1 = chainer.Variable(
             self.xp.zeros((n, self.quantize, 2, 1), dtype=self.xp.float32))
+        # self.queue1.data[:, self.quantize//2, :, :] = 1
         self.queue2 = chainer.Variable(
             self.xp.zeros((n, self.n_channel2, 1, 1), dtype=self.xp.float32))
         self.queue3 = chainer.Variable(
