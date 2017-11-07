@@ -44,14 +44,20 @@ shutil.copy(__file__, result + '/' + __file__)
 shutil.copy('models.py', result + '/' + 'models.py')
 shutil.copy('utils.py', result + '/' + 'utils.py')
 shutil.copy('opt.py', result + '/' + 'opt.py')
+shutil.copy('generate.py', result + '/' + 'generate.py')
+
 
 # Model
+gpu = max(args.gpu, args.GPU)
+if args.gpu >= 0 and args.GPU >= 0:
+    chainer.cuda.get_device_from_id(gpu).use()
 model = models.WaveNet(opt.n_loop, opt.n_layer, opt.n_filter, opt.mu,
                        opt.n_channel1, opt.n_channel2, opt.n_channel3)
 
 # Optimizer
 optimizer = chainer.optimizers.Adam(opt.lr)
 optimizer.setup(model)
+
 
 # Iterator
 if args.process * args.prefetch > 1:
@@ -67,24 +73,31 @@ else:
                                                   repeat=False, shuffle=False)
 
 # Updater
-gpu = max(args.gpu, args.GPU)
 if args.gpu >= 0 and args.GPU >= 0:
+    chainer.cuda.get_device_from_id(args.gpu).use()
     updater = chainer.training.ParallelUpdater(
         train_iter, optimizer,
-        devices={'main': args.gpu, 'second': args.GPU})
+        devices={'main': gpu, 'second': min(args.gpu, args.GPU)})
 elif args.gpu >= 0 or args.GPU >= 0:
+    chainer.cuda.get_device_from_id(args.gpu).use()
     updater = chainer.training.StandardUpdater(
         train_iter, optimizer, device=gpu)
 else:
     updater = chainer.training.StandardUpdater(train_iter, optimizer)
 
 # Trainer
-trainer = chainer.training.Trainer(updater, (opt.epoch, 'epoch'), out=result)
+trainer = chainer.training.Trainer(updater, opt.trigger, out=result)
 
 # Extensions
 trainer.extend(extensions.Evaluator(valid_iter, model, device=gpu),
                trigger=(1000, 'iteration'))
 trainer.extend(extensions.dump_graph('main/loss'))
+trainer.extend(extensions.ExponentialShift('alpha', 0.1),
+               trigger=(100000, 'iteration'))
+trainer.extend(extensions.observe_value(
+    'alpha', lambda trainer: trainer.updater.get_optimizer('main').alpha),
+    trigger=(5, 'iteration'))
+trainer.extend(extensions.observe_lr(), trigger=(5, 'iteration'))
 trainer.extend(extensions.snapshot_object(model, 'model{.updater.iteration}'),
                trigger=(1000, 'iteration'))
 trainer.extend(extensions.LogReport(trigger=(5, 'iteration')))
@@ -98,16 +111,19 @@ trainer.extend(extensions.PlotReport(
 trainer.extend(extensions.PlotReport(
     ['main/accuracy', 'validation/main/accuracy'],
     'iteration', file_name='accuracy.png', trigger=(5, 'iteration')))
+trainer.extend(extensions.PlotReport(
+    ['lr', 'alpha'],
+    'iteration', file_name='lr.png', trigger=(5, 'iteration')))
 trainer.extend(extensions.ProgressBar(update_interval=5))
 
 if args.resume:
-    serializers.load_npz(args.resume, trainer)
+    chainer.serializers.load_npz(args.resume, trainer)
 
 # run
 print('GPU1: {}'.format(args.gpu))
 print('GPU2: {}'.format(args.GPU))
 print('# Minibatch-size: {}'.format(opt.batchsize))
-print('# epoch: {}'.format(opt.epoch))
+print('# {}: {}'.format(opt.trigger[1], opt.trigger[0]))
 print('')
 
 trainer.run()
