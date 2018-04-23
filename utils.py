@@ -30,9 +30,8 @@ class mu_law(object):
 
 
 class Preprocess(object):
-    def __init__(self, data_format, sr, n_fft, hop_length, n_mels, mu, top_db,
+    def __init__(self, sr, n_fft, hop_length, n_mels, mu, top_db,
                  length, dataset, speaker_dic, use_logistic, random=True):
-        self.data_format = data_format
         self.sr = sr
         self.n_fft = n_fft
         self.hop_length = hop_length

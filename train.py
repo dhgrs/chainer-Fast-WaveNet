@@ -57,7 +57,7 @@ elif opt.dataset == 'MIR':
     files = glob.glob(os.path.join(opt.root, 'Wavfile/*.wav'))
 
 preprocess = Preprocess(
-    opt.data_format, opt.sr, opt.n_fft, opt.hop_length, opt.n_mels,
+    opt.sr, opt.n_fft, opt.hop_length, opt.n_mels,
     opt.quantize, opt.top_db, opt.length, opt.dataset, speaker_dic,
     opt.use_logistic)
 

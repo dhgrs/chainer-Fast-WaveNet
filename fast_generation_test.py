@@ -22,7 +22,7 @@ speaker_dic = {
 # preprocess
 n = 1
 inputs = Preprocess(
-    opt.data_format, opt.sr, opt.n_fft, opt.hop_length, opt.n_mels,
+    opt.sr, opt.n_fft, opt.hop_length, opt.n_mels,
     opt.quantize, opt.top_db, None, opt.dataset, speaker_dic, opt.use_logistic,
     False)(path)
 

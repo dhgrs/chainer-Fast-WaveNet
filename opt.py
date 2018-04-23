@@ -11,7 +11,6 @@ report_interval = (100, 'iteration')
 # parameters of dataset
 root = '../VCTK-Corpus/'
 dataset = 'VCTK'
-data_format = 'wav'
 
 # parametars of mel-spectrogram
 sr = 24000
