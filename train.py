@@ -70,7 +70,6 @@ result = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
 os.mkdir(result)
 shutil.copy(__file__, os.path.join(result, __file__))
 shutil.copy('utils.py', os.path.join(result, 'utils.py'))
-shutil.copy('modules.py', os.path.join(result, 'modules.py'))
 shutil.copy('opt.py', os.path.join(result, 'opt.py'))
 shutil.copy('generate.py', os.path.join(result, 'generate.py'))
 shutil.copy('fast_generation_test.py',
