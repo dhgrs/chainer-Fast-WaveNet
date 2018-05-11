@@ -1,6 +1,6 @@
 # parameters of training
-batchsize = 32
-lr = 2e-4
+batchsize = 4
+lr = 1e-4
 ema_mu = 0.9999
 dropout_zero_rate = 0.
 trigger = (1000000, 'iteration')
@@ -31,8 +31,8 @@ use_deconv = True
 use_logistic = True
 n_mixture = 10 * 3
 log_scale_min = -40
-n_loop = 4
-n_layer = 6
+n_loop = 3
+n_layer = 10
 filter_size = 3
 residual_channels = 512
 dilated_channels = 512
@@ -40,6 +40,6 @@ skip_channels = 256
 embed_dim = 64
 
 # parameters of generating
-sample_from_mixture = False
+sample_from_mixture = True
 use_ema = True
 apply_dropout = False
