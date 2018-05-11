@@ -74,6 +74,7 @@ shutil.copy('params.py', os.path.join(result, 'params.py'))
 shutil.copy('generate.py', os.path.join(result, 'generate.py'))
 shutil.copy('fast_generation_test.py',
             os.path.join(result, 'fast_generation_test.py'))
+shutil.copytree('WaveNet', os.path.join(result, 'WaveNet'))
 
 # Model
 wavenet = WaveNet(
