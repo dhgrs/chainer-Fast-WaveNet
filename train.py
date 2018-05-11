@@ -15,7 +15,7 @@ from chainer.training import extensions
 from utils import Preprocess
 from utils import ExponentialMovingAverage
 from WaveNet import WaveNet
-import opt
+import params
 
 
 # use CPU or GPU
@@ -36,11 +36,11 @@ if args.gpus != [-1]:
     chainer.global_config.autotune = True
 
 # get speaker dictionary
-if opt.dataset == 'VCTK':
-    speakers = glob.glob(os.path.join(opt.root, 'wav48/*'))
-elif opt.dataset == 'ARCTIC':
-    speakers = glob.glob(os.path.join(opt.root, '*'))
-if opt.global_conditioned:
+if params.dataset == 'VCTK':
+    speakers = glob.glob(os.path.join(params.root, 'wav48/*'))
+elif params.dataset == 'ARCTIC':
+    speakers = glob.glob(os.path.join(params.root, '*'))
+if params.global_conditioned:
     n_speaker = len(speakers)
     speaker_dic = {
         os.path.basename(speaker): i for i, speaker in enumerate(speakers)}
@@ -49,17 +49,17 @@ else:
     speaker_dic = None
 
 # get paths
-if opt.dataset == 'VCTK':
-    files = glob.glob(os.path.join(opt.root, 'wav48/*/*.wav'))
-elif opt.dataset == 'ARCTIC':
-    files = glob.glob(os.path.join(opt.root, '*/wav/*.wav'))
-elif opt.dataset == 'MIR':
-    files = glob.glob(os.path.join(opt.root, 'Wavfile/*.wav'))
+if params.dataset == 'VCTK':
+    files = glob.glob(os.path.join(params.root, 'wav48/*/*.wav'))
+elif params.dataset == 'ARCTIC':
+    files = glob.glob(os.path.join(params.root, '*/wav/*.wav'))
+elif params.dataset == 'MIR':
+    files = glob.glob(os.path.join(params.root, 'Wavfile/*.wav'))
 
 preprocess = Preprocess(
-    opt.sr, opt.n_fft, opt.hop_length, opt.n_mels,
-    opt.quantize, opt.top_db, opt.length, opt.dataset, speaker_dic,
-    opt.use_logistic)
+    params.sr, params.n_fft, params.hop_length, params.n_mels, params.quantize,
+    params.top_db, params.length, params.dataset, speaker_dic,
+    params.use_logistic)
 
 dataset = chainer.datasets.TransformDataset(files, preprocess)
 train, valid = chainer.datasets.split_dataset_random(
@@ -70,25 +70,25 @@ result = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
 os.mkdir(result)
 shutil.copy(__file__, os.path.join(result, __file__))
 shutil.copy('utils.py', os.path.join(result, 'utils.py'))
-shutil.copy('opt.py', os.path.join(result, 'opt.py'))
+shutil.copy('params.py', os.path.join(result, 'params.py'))
 shutil.copy('generate.py', os.path.join(result, 'generate.py'))
 shutil.copy('fast_generation_test.py',
             os.path.join(result, 'fast_generation_test.py'))
 
 # Model
 wavenet = WaveNet(
-    opt.n_loop, opt.n_layer, opt.filter_size, opt.quantize,
-    opt.residual_channels, opt.dilated_channels, opt.skip_channels,
-    opt.use_logistic, opt.global_conditioned, opt.local_conditioned,
-    opt.n_mixture, opt.log_scale_min, n_speaker, opt.embed_dim,
-    opt.n_mels, opt.upsample_factor, opt.use_deconv,
-    opt.dropout_zero_rate)
-if opt.ema_mu < 1:
-    ema = ExponentialMovingAverage(wavenet, opt.ema_mu)
+    params.n_loop, params.n_layer, params.filter_size, params.quantize,
+    params.residual_channels, params.dilated_channels, params.skip_channels,
+    params.use_logistic, params.global_conditioned, params.local_conditioned,
+    params.n_mixture, params.log_scale_min, n_speaker, params.embed_dim,
+    params.n_mels, params.upsample_factor, params.use_deconv,
+    params.dropout_zero_rate)
+if params.ema_mu < 1:
+    ema = ExponentialMovingAverage(wavenet, params.ema_mu)
 else:
     ema = wavenet
 
-if opt.use_logistic:
+if params.use_logistic:
     loss_fun = wavenet.calculate_logistic_loss
     acc_fun = None
     model = chainer.links.Classifier(ema, loss_fun, acc_fun)
@@ -99,21 +99,21 @@ else:
     model = chainer.links.Classifier(ema, loss_fun, acc_fun)
 
 # Optimizer
-optimizer = chainer.optimizers.Adam(opt.lr/len(args.gpus))
+optimizer = chainer.optimizers.Adam(params.lr/len(args.gpus))
 optimizer.setup(model)
 
 # Iterator
 if args.process * args.prefetch > 1:
     train_iter = chainer.iterators.MultiprocessIterator(
-        train, opt.batchsize,
+        train, params.batchsize,
         n_processes=args.process, n_prefetch=args.prefetch)
     valid_iter = chainer.iterators.MultiprocessIterator(
-        valid, opt.batchsize//len(args.gpus), repeat=False, shuffle=False,
+        valid, params.batchsize//len(args.gpus), repeat=False, shuffle=False,
         n_processes=args.process, n_prefetch=args.prefetch)
 else:
-    train_iter = chainer.iterators.SerialIterator(train, opt.batchsize)
+    train_iter = chainer.iterators.SerialIterator(train, params.batchsize)
     valid_iter = chainer.iterators.SerialIterator(
-        valid, opt.batchsize//len(args.gpus), repeat=False, shuffle=False)
+        valid, params.batchsize//len(args.gpus), repeat=False, shuffle=False)
 
 # Updater
 if args.gpus == [-1]:
@@ -126,24 +126,24 @@ else:
         train_iter, optimizer, devices=devices)
 
 # Trainer
-trainer = chainer.training.Trainer(updater, opt.trigger, out=result)
+trainer = chainer.training.Trainer(updater, params.trigger, out=result)
 
 # Extensions
 trainer.extend(extensions.Evaluator(valid_iter, model, device=args.gpus[0]),
-               trigger=opt.evaluate_interval)
+               trigger=params.evaluate_interval)
 trainer.extend(extensions.dump_graph('main/loss'))
-trainer.extend(extensions.snapshot(), trigger=opt.snapshot_interval)
-trainer.extend(extensions.LogReport(trigger=opt.report_interval))
+trainer.extend(extensions.snapshot(), trigger=params.snapshot_interval)
+trainer.extend(extensions.LogReport(trigger=params.report_interval))
 trainer.extend(extensions.PrintReport(
     ['epoch', 'iteration', 'main/loss', 'main/accuracy',
      'validation/main/loss', 'validation/main/accuracy']),
-    trigger=opt.report_interval)
+    trigger=params.report_interval)
 trainer.extend(extensions.PlotReport(
     ['main/loss', 'validation/main/loss'],
-    'iteration', file_name='loss.png', trigger=opt.report_interval))
+    'iteration', file_name='loss.png', trigger=params.report_interval))
 trainer.extend(extensions.PlotReport(
     ['main/accuracy', 'validation/main/accuracy'],
-    'iteration', file_name='accuracy.png', trigger=opt.report_interval))
+    'iteration', file_name='accuracy.png', trigger=params.report_interval))
 trainer.extend(extensions.ProgressBar(update_interval=1))
 
 if args.resume:
@@ -153,8 +153,8 @@ if args.resume:
 print('GPUs: {}'.format(*args.gpus))
 print('# train: {}'.format(len(train)))
 print('# valid: {}'.format(len(valid)))
-print('# Minibatch-size: {}'.format(opt.batchsize))
-print('# {}: {}'.format(opt.trigger[1], opt.trigger[0]))
+print('# Minibatch-size: {}'.format(params.batchsize))
+print('# {}: {}'.format(params.trigger[1], params.trigger[0]))
 print('')
 
 trainer.run()
