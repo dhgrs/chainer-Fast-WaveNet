@@ -136,6 +136,7 @@ for i in range(len(output) - 1):
 
         rand = model.xp.sum(rand, axis=1)
         value = model.xp.squeeze(rand.astype(model.xp.float32))
+        value /= 127.5
         x.array[:] = value
     else:
         value = model.xp.random.choice(
