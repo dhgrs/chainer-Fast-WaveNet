@@ -235,13 +235,13 @@ class WaveNet(chainer.Chain):
         log_scales = F.maximum(
             log_scales, self.scalar_to_tensor(log_scales, self.log_scale_min))
 
-        y = F.broadcast_to(y, means.shape)
+        y = F.broadcast_to(127.5 * y, means.shape)
 
         centered_y = y - means
         inv_stdv = F.exp(-log_scales)
-        plus_in = inv_stdv * (centered_y + 1 / (self.quantize - 1))
+        plus_in = inv_stdv * (centered_y + 127.5 / (self.quantize - 1))
         cdf_plus = F.sigmoid(plus_in)
-        min_in = inv_stdv * (centered_y - 1 / (self.quantize - 1))
+        min_in = inv_stdv * (centered_y - 127.5 / (self.quantize - 1))
         cdf_min = F.sigmoid(min_in)
 
         log_cdf_plus = plus_in - F.softplus(plus_in)
@@ -254,7 +254,7 @@ class WaveNet(chainer.Chain):
 
         log_probs = F.where(
             # condition
-            y.array < self.scalar_to_tensor(y, -0.999),
+            y.array < self.scalar_to_tensor(y, 127.5 * -0.999),
 
             # true
             log_cdf_plus,
@@ -262,7 +262,7 @@ class WaveNet(chainer.Chain):
             # false
             F.where(
                 # condition
-                y.array > self.scalar_to_tensor(y, 0.999),
+                y.array > self.scalar_to_tensor(y, 127.5 * 0.999),
 
                 # true
                 log_one_minus_cdf_min,
