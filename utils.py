@@ -83,7 +83,7 @@ class Preprocess(object):
         spectrogram = librosa.feature.melspectrogram(
             raw, self.sr, n_fft=self.n_fft, hop_length=self.hop_length,
             n_mels=self.n_mels)
-        spectrogram = librosa.amplitude_to_db(
+        spectrogram = librosa.power_to_db(
             spectrogram, ref=numpy.max)
         spectrogram += 40
         spectrogram /= 40
