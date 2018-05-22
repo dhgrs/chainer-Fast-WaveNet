@@ -36,9 +36,9 @@ class Preprocess(object):
         self.n_mels = n_mels
         self.top_db = top_db
         if input_dim == 1:
-            self.apply_mu_law = False
+            self.mu_law_input = False
         else:
-            self.apply_mu_law = True
+            self.mu_law_input = True
             self.mu_law = MuLaw(quantize)
             self.quantize = quantize
         if length is None:
@@ -46,16 +46,19 @@ class Preprocess(object):
         else:
             self.length = length + 1
         self.use_logistic = use_logistic
+        if self.mu_law_input or not self.use_logistic:
+            self.mu_law = MuLaw(quantize)
+            self.quantize = quantize
 
     def __call__(self, path):
-        # load data
+        # load data(trim and normalize)
         raw, _ = librosa.load(path, self.sr)
         raw, _ = librosa.effects.trim(raw, self.top_db)
         raw /= numpy.abs(raw).max()
         raw = raw.astype(numpy.float32)
 
         # mu-law transform
-        if self.apply_mu_law:
+        if self.mu_law_input or not self.use_logistic:
             quantized = self.mu_law.transform(raw)
 
         # padding/triming
@@ -65,15 +68,15 @@ class Preprocess(object):
                 pad = self.length - len(raw)
                 raw = numpy.concatenate(
                     (raw, numpy.zeros(pad, dtype=numpy.float32)))
-                if self.apply_mu_law:
+                if self.mu_law_input or not self.use_logistic:
                     quantized = numpy.concatenate(
-                        (quantized,
-                            self.mu // 2 * numpy.ones(pad, dtype=numpy.int32)))
+                        (quantized, self.quantize // 2 * numpy.ones(pad)))
+                    quantized = quantized.astype(numpy.int32)
             else:
                 # triming
                 start = random.randint(0, len(raw) - self.length - 1)
                 raw = raw[start:start + self.length]
-                if self.apply_mu_law:
+                if self.mu_law_input or not self.use_logistic:
                     quantized = quantized[start:start + self.length]
 
         # make mel spectrogram
@@ -89,25 +92,23 @@ class Preprocess(object):
         spectrogram = spectrogram.astype(numpy.float32)
 
         # expand dimensions
-        if self.apply_mu_law:
+        if self.mu_law_input:
             one_hot = numpy.identity(
                 self.quantize, dtype=numpy.float32)[quantized]
             one_hot = numpy.expand_dims(one_hot.T, 2)
-            quantized = numpy.expand_dims(quantized, 1)
-        else:
-            raw = numpy.expand_dims(raw, 0)  # expand channel
-            raw = numpy.expand_dims(raw, -1)  # expand height
+        raw = numpy.expand_dims(raw, 0)  # expand channel
+        raw = numpy.expand_dims(raw, -1)  # expand height
         spectrogram = numpy.expand_dims(spectrogram, 2)
+        if not self.use_logistic:
+            quantized = numpy.expand_dims(quantized, 1)
 
         # return
         inputs = ()
-        if self.apply_mu_law:
+        if self.mu_law_input:
             inputs += (one_hot[:, :-1],)
         else:
             inputs += (raw[:, :-1],)
-
         inputs += (spectrogram,)
-
         if self.use_logistic:
             inputs += (raw[:, 1:],)
         else:
