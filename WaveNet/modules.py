@@ -165,7 +165,6 @@ class WaveNet(chainer.Chain):
 
         logit_probs = y[:, :nr_mix]
         means = y[:, nr_mix:2 * nr_mix]
-        means *= 127.5
         log_scales = y[:, 2 * nr_mix:3 * nr_mix]
         log_scales = F.maximum(
             log_scales, self.scalar_to_tensor(log_scales, self.log_scale_min))

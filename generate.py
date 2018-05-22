@@ -83,7 +83,6 @@ for i in range(len(output) - 1):
 
         logit_probs = out[:, :nr_mix]
         means = out[:, nr_mix:2 * nr_mix]
-        means *= 127.5
         log_scales = out[:, 2 * nr_mix:3 * nr_mix]
         log_scales = decoder.xp.maximum(log_scales, params.log_scale_min)
 
