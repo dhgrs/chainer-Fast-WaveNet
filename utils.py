@@ -1,16 +1,14 @@
 import random
-import os
 import copy
 
 import numpy
 import librosa
-import chainer
 from chainer import configuration
 from chainer import link
 
 
-class mu_law(object):
-    def __init__(self, mu=256, int_type=numpy.uint8, float_type=numpy.float32):
+class MuLaw(object):
+    def __init__(self, mu=256, int_type=numpy.int32, float_type=numpy.float32):
         self.mu = mu
         self.int_type = int_type
         self.float_type = float_type
@@ -30,56 +28,58 @@ class mu_law(object):
 
 
 class Preprocess(object):
-    def __init__(self, sr, n_fft, hop_length, n_mels, mu, top_db,
-                 length, dataset, speaker_dic, use_logistic, random=True):
+    def __init__(self, sr, n_fft, hop_length, n_mels, top_db, input_dim,
+                 quantize, length, use_logistic):
         self.sr = sr
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.n_mels = n_mels
-        self.mu = mu
-        self.mu_law = mu_law(mu)
         self.top_db = top_db
+        if input_dim == 1:
+            self.mu_law_input = False
+        else:
+            self.mu_law_input = True
+            self.mu_law = MuLaw(quantize)
+            self.quantize = quantize
         if length is None:
             self.length = None
         else:
             self.length = length + 1
-        self.dataset = dataset
-        self.speaker_dic = speaker_dic
         self.use_logistic = use_logistic
-        self.random = random
+        if self.mu_law_input or not self.use_logistic:
+            self.mu_law = MuLaw(quantize)
+            self.quantize = quantize
 
     def __call__(self, path):
-        # load data
-        raw = self.read_file(path)
+        # load data(trim and normalize)
+        raw, _ = librosa.load(path, self.sr)
         raw, _ = librosa.effects.trim(raw, self.top_db)
         raw /= numpy.abs(raw).max()
+        raw = raw.astype(numpy.float32)
 
-        if not self.use_logistic:
+        # mu-law transform
+        if self.mu_law_input or not self.use_logistic:
             quantized = self.mu_law.transform(raw)
 
+        # padding/triming
         if self.length is not None:
             if len(raw) <= self.length:
                 # padding
-                pad = self.length-len(raw)
+                pad = self.length - len(raw)
                 raw = numpy.concatenate(
                     (raw, numpy.zeros(pad, dtype=numpy.float32)))
-                if not self.use_logistic:
+                if self.mu_law_input or not self.use_logistic:
                     quantized = numpy.concatenate(
-                        (quantized,
-                            self.mu // 2 * numpy.ones(pad, dtype=numpy.int32)))
+                        (quantized, self.quantize // 2 * numpy.ones(pad)))
+                    quantized = quantized.astype(numpy.int32)
             else:
                 # triming
-                if self.random:
-                    start = random.randint(0, len(raw) - self.length-1)
-                    raw = raw[start:start + self.length]
-                    if not self.use_logistic:
-                        quantized = quantized[start:start + self.length]
-                else:
-                    raw = raw[:self.length]
-                    if not self.use_logistic:
-                        quantized = quantized[:self.length]
+                start = random.randint(0, len(raw) - self.length - 1)
+                raw = raw[start:start + self.length]
+                if self.mu_law_input or not self.use_logistic:
+                    quantized = quantized[start:start + self.length]
 
-        # make mel=spectrogram
+        # make mel spectrogram
         spectrogram = librosa.feature.melspectrogram(
             raw, self.sr, n_fft=self.n_fft, hop_length=self.hop_length,
             n_mels=self.n_mels)
@@ -87,39 +87,33 @@ class Preprocess(object):
             spectrogram, ref=numpy.max)
         spectrogram += 40
         spectrogram /= 40
+        if self.length is not None:
+            spectrogram = spectrogram[:, :self.length // self.hop_length]
+        spectrogram = spectrogram.astype(numpy.float32)
 
-        # expand dimension
-        if self.use_logistic:
-            # expand channel
-            raw = numpy.expand_dims(raw, 0)
-
-            # expand height
-            raw = numpy.expand_dims(raw, -1)
-        else:
-            one_hot = numpy.identity(self.mu)[quantized].astype(numpy.float32)
+        # expand dimensions
+        if self.mu_law_input:
+            one_hot = numpy.identity(
+                self.quantize, dtype=numpy.float32)[quantized]
             one_hot = numpy.expand_dims(one_hot.T, 2)
-            quantized = numpy.expand_dims(quantized.astype(numpy.int32), 1)
-        spectrogram = numpy.expand_dims(spectrogram, 2).astype(numpy.float32)
+        raw = numpy.expand_dims(raw, 0)  # expand channel
+        raw = numpy.expand_dims(raw, -1)  # expand height
+        spectrogram = numpy.expand_dims(spectrogram, 2)
+        if not self.use_logistic:
+            quantized = numpy.expand_dims(quantized, 1)
 
-        # get speaker-id
-        if self.speaker_dic is None:
-            speaker = [-1]
+        # return
+        inputs = ()
+        if self.mu_law_input:
+            inputs += (one_hot[:, :-1],)
         else:
-            if self.dataset == 'VCTK':
-                speaker = self.speaker_dic[
-                    os.path.basename(os.path.dirname(path))]
-            elif self.dataset == 'ARCTIC':
-                speaker = self.speaker_dic[
-                    os.path.basename(os.path.dirname(os.path.dirname(path)))]
-            speaker = numpy.int32(speaker)
+            inputs += (raw[:, :-1],)
+        inputs += (spectrogram,)
         if self.use_logistic:
-            return raw[:, :-1], speaker, spectrogram[:, :-1], raw[:, 1:]
+            inputs += (raw[:, 1:],)
         else:
-            return one_hot[:, :-1], speaker, spectrogram[:, :-1], quantized[1:]
-
-    def read_file(self, path):
-        x, sr = librosa.core.load(path, self.sr, res_type='kaiser_fast')
-        return x
+            inputs += (quantized[1:],)
+        return inputs
 
 
 class ExponentialMovingAverage(link.Chain):
