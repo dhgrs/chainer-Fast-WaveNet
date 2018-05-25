@@ -1,3 +1,4 @@
+import numpy
 import chainer
 import chainer.functions as F
 import chainer.links as L
@@ -161,6 +162,9 @@ class WaveNet(chainer.Chain):
         return self.xp.full(shape, scalar, dtype=self.xp.float32)
 
     def calculate_logistic_loss(self, y, t):
+        xp = chainer.cuda.get_array_module(t)
+        if xp != numpy:
+            xp.cuda.Device(t.device).use()
         nr_mix = y.shape[1] // 3
 
         logit_probs = y[:, :nr_mix]

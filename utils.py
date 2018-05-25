@@ -128,6 +128,9 @@ class ExponentialMovingAverage(link.Chain):
     def __call__(self, *args, **kwargs):
         if configuration.config.train:
             ys = self.target(*args, **kwargs)
+            xp = chainer.cuda.get_array_module(ys)
+            if xp != numpy:
+                xp.cuda.Device(ys.array.device).use()
             for target_name, target_param in self.target.namedparams():
                 for ema_name, ema_param in self.ema.namedparams():
                     if target_name == ema_name:
