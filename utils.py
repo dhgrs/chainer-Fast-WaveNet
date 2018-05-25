@@ -3,6 +3,7 @@ import copy
 
 import numpy
 import librosa
+import chainer
 from chainer import configuration
 from chainer import link
 
