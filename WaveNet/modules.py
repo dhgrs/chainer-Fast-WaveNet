@@ -236,7 +236,7 @@ class WaveNet(chainer.Chain):
     def generate(self, x, condition):
         self.embed_queue = F.concat((self.embed_queue[:, :, 1:], x), axis=2)
         x = self.embed(self.embed_queue)
-        x = F.relu(self.resb.generate(x, condition))
+        x = F.relu(self.resnet.generate(x, condition))
 
         self.proj1_queue = F.concat((self.proj1_queue[:, :, 1:], x), axis=2)
         x = F.relu(self.proj1(self.proj1_queue))

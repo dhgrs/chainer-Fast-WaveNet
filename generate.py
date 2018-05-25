@@ -17,7 +17,7 @@ parser.add_argument('--model', '-m', help='snapshot of trained model')
 parser.add_argument('--gpu', '-g', type=int, default=-1,
                     help='GPU ID (negative value indicates CPU)')
 args = parser.parse_args()
-if args.gpus != [-1]:
+if args.gpu != [-1]:
     chainer.cuda.set_max_workspace_size(2 * 512 * 1024 * 1024)
     chainer.global_config.autotune = True
 
@@ -70,6 +70,7 @@ if use_gpu:
     condition = chainer.cuda.to_gpu(condition, device=args.gpu)
     encoder.to_gpu(device=args.gpu)
     decoder.to_gpu(device=args.gpu)
+x = chainer.Variable(x)
 condition = encoder(condition)
 decoder.initialize(n)
 output = decoder.xp.zeros(condition.shape[2])
@@ -109,7 +110,7 @@ for i in range(len(output) - 1):
         x.array[:] = value
     else:
         value = decoder.xp.random.choice(
-            params.quantize, size=1,
+            params.quantize,
             p=chainer.functions.softmax(out).array[0, :, 0, 0])
         zeros = decoder.xp.zeros_like(x.array)
         zeros[:, value, :, :] = 1
