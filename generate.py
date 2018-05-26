@@ -31,9 +31,8 @@ inputs = Preprocess(
     params.input_dim, params.quantize, None, params.use_logistic)(path)
 
 _, condition, _ = inputs
-x = chainer.Variable(
-    numpy.zeros([n, params.input_dim, 1, 1], dtype=numpy.float32))
-condition = chainer.Variable(numpy.expand_dims(condition, axis=0))
+x = numpy.zeros([n, params.input_dim, 1, 1], dtype=numpy.float32)
+condition = numpy.expand_dims(condition, axis=0)
 
 # make model
 encoder = UpsampleNet(params.channels, params.upsample_factors)
@@ -71,6 +70,7 @@ if use_gpu:
     encoder.to_gpu(device=args.gpu)
     decoder.to_gpu(device=args.gpu)
 x = chainer.Variable(x)
+condition = chainer.Variable(condition)
 condition = encoder(condition)
 decoder.initialize(n)
 output = decoder.xp.zeros(condition.shape[2])

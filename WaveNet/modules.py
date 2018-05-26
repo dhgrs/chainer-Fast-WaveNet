@@ -136,6 +136,7 @@ class WaveNet(chainer.Chain):
                 output_dim = quantize
             self.proj2 = L.Convolution2D(skip_channels, output_dim, 1)
 
+        self.input_dim = input_dim
         self.quantize = quantize
         self.skip_channels = skip_channels
         self.log_scale_min = log_scale_min
