@@ -8,15 +8,15 @@ snapshot_interval = (10000, 'iteration')
 report_interval = (100, 'iteration')
 
 # parameters of dataset
-root = '../VCTK-Corpus/'
-dataset_type = 'VCTK'
+root = '../LJSpeech-1.1/'
+dataset_type = 'LJSpeech'
 split_seed = 71
 
 # parameters of preprocessing
 sr = 24000
 n_fft = 1024
 hop_length = 256
-n_mels = 128
+n_mels = 80
 top_db = 20
 input_dim = 1
 quantize = 2 ** 16
