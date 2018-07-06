@@ -45,6 +45,9 @@ elif params.dataset_type == 'ARCTIC':
 elif params.dataset_type == 'vs':
     files = sorted([
         str(path) for path in pathlib.Path(params.root).glob('*/*.wav')])
+elif params.dataset_type == 'LJSpeech':
+    files = sorted([
+        str(path) for path in pathlib.Path(params.root).glob('wavs/*.wav')])
 
 preprocess = Preprocess(
     params.sr, params.n_fft, params.hop_length, params.n_mels, params.top_db,
