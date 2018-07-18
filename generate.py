@@ -3,6 +3,7 @@ import argparse
 import numpy
 import librosa
 import chainer
+import tqdm
 
 from WaveNet import WaveNet
 from net import UpsampleNet
@@ -75,7 +76,7 @@ condition = encoder(condition)
 decoder.initialize(n)
 output = decoder.xp.zeros(condition.shape[2])
 
-for i in range(len(output) - 1):
+for i in tqdm.tqdm(range(len(output) - 1)):
     with chainer.using_config('enable_backprop', False):
         with chainer.using_config('train', params.apply_dropout):
             out = decoder.generate(x, condition[:, :, i:i + 1]).array
